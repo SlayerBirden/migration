@@ -52,5 +52,14 @@ abstract class AbstractShell
         return false;
     }
 
-    abstract public function run();
+    public function run(){
+        $time = microtime(true);
+        $memory = memory_get_usage();
+        $this->_run();
+        printf("EVALUATION TIME: %.4f seconds\n",  microtime(true) - $time);
+        printf("MEMORY USED: %.2f kB\n",  round((memory_get_usage() - $memory) / 1024, 2));
+        printf("MEMORY PEAK: %.2f kB\n",  round(memory_get_peak_usage() / 1024, 2));
+    }
+
+    abstract protected  function _run();
 }

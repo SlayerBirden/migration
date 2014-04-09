@@ -139,7 +139,7 @@ require_once 'shell.php';
 class ShellGenerator extends AbstractShell
 {
 
-    public function run()
+    public function _run()
     {
         $lineNum = $this->getArg('n');
         $file = $this->getArg('f');
@@ -151,6 +151,7 @@ class ShellGenerator extends AbstractShell
         }
         $generator = new ActorGenerator($file);
         $generator->run($lineNum);
+        echo "GENERATED $lineNum RECORDS;\n";
     }
 }
 

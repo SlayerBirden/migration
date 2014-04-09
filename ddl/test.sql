@@ -5,8 +5,8 @@ SET FOREIGN_KEY_CHECKS=0;
 -- ----------------------------
 DROP TABLE IF EXISTS `actor_data`;
 CREATE TABLE `actor_data` (
-  `id` int(11) NOT NULL DEFAULT '0',
-  `actor_id` int(11) DEFAULT NULL,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `actor_id` int(11) unsigned DEFAULT NULL,
   `name` varchar(255) DEFAULT NULL,
   `lastname` varchar(255) DEFAULT NULL,
   `age` tinyint(4) DEFAULT NULL,
@@ -21,8 +21,8 @@ CREATE TABLE `actor_data` (
 -- ----------------------------
 DROP TABLE IF EXISTS `actor_entity`;
 CREATE TABLE `actor_entity` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `uin` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `UNIQUE_UIN` (`uin`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=388 DEFAULT CHARSET=utf8;

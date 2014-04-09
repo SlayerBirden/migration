@@ -7,6 +7,10 @@ abstract class AbstractImporter
 {
     protected $_pdo;
 
+    protected $_tableSchema;
+
+    protected $_autoInc;
+
     /**
      * @param string $host
      * @param string $user
@@ -15,6 +19,7 @@ abstract class AbstractImporter
      */
     public function __construct($host, $user, $passw, $db_name)
     {
+        $this->_tableSchema = $db_name;
         try {
             if (!empty($passw)) {
                 $this->_pdo = new \PDO("mysql:dbname=$db_name;host=$host", $user, $passw, array(\PDO::MYSQL_ATTR_LOCAL_INFILE => true));
@@ -103,8 +108,7 @@ MYSQL;
         $sql = <<<MYSQL
 LOAD DATA LOCAL INFILE '$file_path'
 INTO TABLE actor_data
-(@uin, name, lastname, age, movie)
-SET actor_id = (SELECT e.id FROM actor_entity e WHERE e.uin = @uin);
+(uin, name, lastname, age, movie);
 MYSQL;
         $rows = $this->_pdo->exec($sql);
         if ($rows === false) {
@@ -112,7 +116,39 @@ MYSQL;
             echo "ERROR:\n";
             print_r($error);
         }
+        // insert id
+        $sql = <<<MYSQL
+UPDATE actor_data d
+ JOIN actor_entity e ON d.uin = e.uin
+ SET d.actor_id = e.id;
+MYSQL;
+        $rowsUpdated = $this->_pdo->exec($sql);
+        if ($rowsUpdated === false) {
+            $error = $this->_pdo->errorInfo();
+            echo "ERROR:\n";
+            print_r($error);
+        }
         return $rows;
+    }
+
+    protected function _startImport()
+    {
+        parent::_startImport();
+        // add column
+        $sql = <<<MYSQL
+ALTER TABLE actor_data ADD COLUMN uin VARCHAR(255) NOT NULL;
+MYSQL;
+        $this->_pdo->exec($sql);
+    }
+
+    protected function _endImport()
+    {
+        parent::_endImport();
+        // add column
+        $sql = <<<MYSQL
+ALTER TABLE actor_data DROP COLUMN uin;
+MYSQL;
+        $this->_pdo->exec($sql);
     }
 }
 

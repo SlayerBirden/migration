@@ -58,13 +58,13 @@ abstract class AbstractImporter
 
     protected function _startImport(&$file_path, $skipTmp = false)
     {
-//        $this->_pdo->exec('SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0');
+        $this->_pdo->exec('SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0');
 //        $this->_pdo->exec('SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0');
     }
 
     protected function _endImport($file_path)
     {
-//        $this->_pdo->exec("SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS=0, 0, 1)");
+        $this->_pdo->exec("SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS=0, 0, 1)");
 //        $this->_pdo->exec("SET UNIQUE_CHECKS=IF(@OLD_UNIQUE_CHECKS=0, 0, 1)");
     }
 
@@ -151,6 +151,7 @@ MYSQL;
             $row = str_replace("\n", "\t" . $increment++ . "\n", $row);
             fwrite($_handleTmp, $row);
         }
+        fclose($_handle);
         // replace incoming file with new one
         $file_path = $_new_file_path;
     }

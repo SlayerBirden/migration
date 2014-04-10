@@ -42,10 +42,15 @@ abstract class AbstractImporter
     public function run($file_path)
     {
         $this->_startImport();
+        $time = microtime(true);
         $rows = $this->importEntity($file_path);
         echo "$rows Entity rows imported.\n";
+        $time2 = microtime(true);
+        printf("IMPORT ENTITY TIME: %.4f seconds\n",  $time2 - $time);
         $rows = $this->importData($file_path);
         echo "$rows Data rows imported.\n";
+        $time3 = microtime(true);
+        printf("IMPORT DATA TIME: %.4f seconds\n",  $time3 - $time2);
         $this->_endImport();
     }
 

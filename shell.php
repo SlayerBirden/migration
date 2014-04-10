@@ -56,7 +56,7 @@ abstract class AbstractShell
         $time = microtime(true);
         $memory = memory_get_usage();
         $this->_run();
-        printf("EVALUATION TIME: %.4f seconds\n",  microtime(true) - $time);
+        printf("PROCESS TIME: %.4f seconds\n",  microtime(true) - $time);
         printf("MEMORY USED: %.2f kB\n",  round((memory_get_usage() - $memory) / 1024, 2));
         printf("MEMORY PEAK: %.2f kB\n",  round(memory_get_peak_usage() / 1024, 2));
     }

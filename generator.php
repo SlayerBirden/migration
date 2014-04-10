@@ -11,6 +11,9 @@ abstract class AbstractGenerator
     public function __construct($fileName)
     {
         $fileName = "source/$fileName";
+        if (!is_dir('source')) {
+            mkdir('source', 0755, true);
+        }
         $this->_handle = fopen($fileName, 'w');
     }
 

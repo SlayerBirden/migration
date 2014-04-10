@@ -54,7 +54,7 @@ abstract class AbstractImporter
             $this->doImport($data);
         }
         fclose($_handle);
-        echo "All rows imported";
+        echo "All rows imported\n";
         $this->_endImport();
     }
 

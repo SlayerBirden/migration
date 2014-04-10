@@ -12,7 +12,7 @@ CREATE TABLE `actor_data` (
   `age` tinyint(4) DEFAULT NULL,
   `movie` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `FK_ACTOR` (`actor_id`),
+  UNIQUE KEY `FK_ACTOR` (`actor_id`) USING BTREE,
   CONSTRAINT `FK_ACTOR` FOREIGN KEY (`actor_id`) REFERENCES `actor_entity` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

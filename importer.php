@@ -38,10 +38,12 @@ abstract class AbstractImporter
 
     /**
      * @param string $file_path
+     * @param bool $skipTmp
      */
-    public function run($file_path)
+    public function run($file_path, $skipTmp = false)
     {
-        $this->_startImport();
+        $file_path = 'source/' . $file_path;
+        $this->_startImport($file_path, $skipTmp);
         $time = microtime(true);
         $rows = $this->importEntity($file_path);
         echo "$rows Entity rows imported.\n";
@@ -51,18 +53,18 @@ abstract class AbstractImporter
         echo "$rows Data rows imported.\n";
         $time3 = microtime(true);
         printf("IMPORT DATA TIME: %.4f seconds\n",  $time3 - $time2);
-        $this->_endImport();
+        $this->_endImport($file_path);
     }
 
-    protected function _startImport()
+    protected function _startImport(&$file_path, $skipTmp = false)
     {
-        $this->_pdo->exec('SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0');
+//        $this->_pdo->exec('SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0');
 //        $this->_pdo->exec('SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0');
     }
 
-    protected function _endImport()
+    protected function _endImport($file_path)
     {
-        $this->_pdo->exec("SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS=0, 0, 1)");
+//        $this->_pdo->exec("SET FOREIGN_KEY_CHECKS=IF(@OLD_FOREIGN_KEY_CHECKS=0, 0, 1)");
 //        $this->_pdo->exec("SET UNIQUE_CHECKS=IF(@OLD_UNIQUE_CHECKS=0, 0, 1)");
     }
 
@@ -88,11 +90,10 @@ class Importer extends AbstractImporter
      */
     public function importEntity($file_path)
     {
-        $file_path = 'source/' . $file_path;
         $sql = <<<MYSQL
 LOAD DATA LOCAL INFILE '$file_path'
 INTO TABLE actor_entity
-(uin, @name, @lastname, @age, @movie);
+(uin, @name, @lastname, @age, @movie, id);
 MYSQL;
         $rows = $this->_pdo->exec($sql);
         if ($rows === false) {
@@ -109,11 +110,10 @@ MYSQL;
      */
     public function importData($file_path)
     {
-        $file_path = 'source/' . $file_path;
         $sql = <<<MYSQL
 LOAD DATA LOCAL INFILE '$file_path'
 INTO TABLE actor_data
-(uin, name, lastname, age, movie);
+(@uin, name, lastname, age, movie, actor_id);
 MYSQL;
         $rows = $this->_pdo->exec($sql);
         if ($rows === false) {
@@ -121,39 +121,49 @@ MYSQL;
             echo "ERROR:\n";
             print_r($error);
         }
-        // insert id
-        $sql = <<<MYSQL
-UPDATE actor_data d
- JOIN actor_entity e ON d.uin = e.uin
- SET d.actor_id = e.id;
-MYSQL;
-        $rowsUpdated = $this->_pdo->exec($sql);
-        if ($rowsUpdated === false) {
-            $error = $this->_pdo->errorInfo();
-            echo "ERROR:\n";
-            print_r($error);
-        }
         return $rows;
     }
 
-    protected function _startImport()
+    protected function _startImport(&$file_path, $skipTmp = false)
     {
-        parent::_startImport();
-        // add column
-        $sql = <<<MYSQL
-ALTER TABLE actor_data ADD COLUMN uin VARCHAR(255) NOT NULL;
+        parent::_startImport($file_path);
+        $this->_pdo->exec('LOCK TABLES actor_entity WRITE, actor_data WRITE;');
+        if ($skipTmp && file_exists($file_path . '_tmp')) {
+            $file_path = $file_path . '_tmp';
+            return;
+        }
+        // get last id
+        $select = <<<MYSQL
+SELECT `AUTO_INCREMENT`
+FROM  INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'test'
+AND   TABLE_NAME   = 'actor_entity';
 MYSQL;
-        $this->_pdo->exec($sql);
+        $statement = $this->_pdo->query($select);
+        $resultSet = $statement->fetch(\PDO::FETCH_NUM);
+        $increment = $resultSet[0];
+        // file writer - write tmp file with increment column
+        $_new_file_path = $file_path . '_tmp';
+        $_handleTmp = fopen($_new_file_path, 'w');
+        $_handle = fopen($file_path, 'r');
+        while (!feof($_handle)) {
+            $row = fgets($_handle);
+            $row = str_replace("\n", "\t" . $increment++ . "\n", $row);
+            fwrite($_handleTmp, $row);
+        }
+        // replace incoming file with new one
+        $file_path = $_new_file_path;
     }
 
-    protected function _endImport()
+    protected function _endImport($file_path)
     {
-        parent::_endImport();
-        // add column
-        $sql = <<<MYSQL
-ALTER TABLE actor_data DROP COLUMN uin;
-MYSQL;
-        $this->_pdo->exec($sql);
+        parent::_endImport($file_path);
+        $this->_pdo->exec('UNLOCK TABLES;');
+        // remove tmp file
+        if (strpos($file_path, '_tmp') !== false) {
+            // can be unlocked
+//            unlink($file_path);
+        }
     }
 }
 
@@ -168,14 +178,15 @@ class ShellImporter extends AbstractShell
         $password = $this->getArg('p');
         $db = $this->getArg('db');
         $file = $this->getArg('f');
+        $skipTmp = $this->getArg('t');
         if ($user === false || $host === false
             || $db === false || $file === false) {
             echo "Please specify all required args\n";
             die;
         }
 
-        $generator = new Importer($host, $user, $password, $db);
-        $generator->run($file);
+        $importer = new Importer($host, $user, $password, $db);
+        $importer->run($file, $skipTmp);
     }
 }
 

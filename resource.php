@@ -49,9 +49,26 @@ abstract class AbstractImporter
         $file_path = 'source/' . $file_path;
         $this->_startImport();
         $_handle = fopen($file_path, 'r');
+        $sql = <<<MYSQL
+INSERT INTO actor_entity (uin) VALUES (?);
+MYSQL;
+        $stmpEntity = $this->_pdo->prepare($sql);
+        if (!$stmpEntity) {
+            echo "Error while preparing statement\n";
+            die;
+        }
+        $sql = <<<MYSQL
+INSERT INTO actor_data (actor_id, name, lastname, age, movie)
+ VALUES (?, ?, ?, ?, ?);
+MYSQL;
+        $stmpData = $this->_pdo->prepare($sql);
+        if (!$stmpData) {
+            echo "Error while preparing statement\n";
+            die;
+        }
         while(!feof($_handle)) {
             $data = fgetcsv($_handle, null, "\t", '"', "\\");
-            $this->doImport($data);
+            $this->doImport($data, $stmpEntity, $stmpData);
         }
         fclose($_handle);
         echo "All rows imported\n";
@@ -72,9 +89,11 @@ abstract class AbstractImporter
 
     /**
      * @param array $data
+     * @param \PDOStatement $stmpEntity
+     * @param \PDOStatement $stmpData
      * @return mixed
      */
-    abstract public function doImport($data);
+    abstract public function doImport($data, $stmpEntity, $stmpData);
 }
 
 class ResourceImporter extends AbstractImporter
@@ -82,17 +101,18 @@ class ResourceImporter extends AbstractImporter
 
     /**
      * @param array $data
+     * @param \PDOStatement $smtpEntity
+     * @param \PDOStatement $smtpData
      * @return int
      * @throws \Exception
      */
-    public function doImport($data)
+    public function doImport($data, $smtpEntity, $smtpData)
     {
-        $sql = <<<MYSQL
-INSERT INTO actor_entity (uin) VALUES ('{$data[0]}');
-SELECT LAST_INSERT_ID();
-MYSQL;
-        $length = $this->_pdo->exec($sql);
-        if (false === $length) {
+        if (empty($data)) {
+            return;
+        }
+        $result = $smtpEntity->execute(array($data[0]));
+        if (!$result) {
             echo "ERROR:\n";
             print_r($this->_pdo->errorInfo());
         }
@@ -107,12 +127,8 @@ MYSQL;
         // get id
         $results = $statement->fetch(\PDO::FETCH_NUM);
         $_id = $results[0];
-        $sql = <<<MYSQL
-INSERT INTO actor_data (actor_id, name, lastname, age, movie)
- VALUES ('$_id', '{$data[1]}', '{$data[2]}', '{$data[3]}', '{$data[4]}');
-MYSQL;
-        $rows = $this->_pdo->exec($sql);
-        if (false === $rows) {
+        $result = $smtpData->execute(array($_id, $data[1], $data[2], $data[3], $data[4]));
+        if (!$result) {
             echo "ERROR:\n";
             print_r($this->_pdo->errorInfo());
         }
